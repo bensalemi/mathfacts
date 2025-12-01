@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Multiplication Practice</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            touch-action: manipulation;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .container {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 100%;
+            max-width: 700px;
+        }
+        
+        h1 {
+            color: #333;
+            margin: 0 0 15px 0;
+            font-size: clamp(20px, 5vw, 28px);
+        }
+        
+        .new-problem-btn {
+            width: clamp(135px, 12vw, 55px);
+            height: clamp(45px, 12vw, 55px);
+            padding: 0;
+            border-radius: 10px;
+            font-size: clamp(16px, 4vw, 20px);
+        }
+        
+        .numbers {
+            display: flex;
+            gap: clamp(8px, 3vw, 20px);
+            justify-content: center;
+            align-items: center;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .plus-sign, .equals-sign .minus-sign .multiplication-sign {
+            font-size: clamp(24px, 6vw, 36px);
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .main-content {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        
+        .left-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .right-section {
+            text-align: left;
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .feedback {
+            font-size: clamp(24px, 5vw, 36px);
+            font-weight: bold;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 0 15px 0;
+        }
+        
+        .time-display {
+            font-size: clamp(16px, 4vw, 24px);
+            margin-top: 5px;
+        }
+        
+        .correct {
+            color: #10b981;
+        }
+        
+        .incorrect {
+            color: #000000;
+        }
+        
+        .number-box {
+            width: clamp(50px, 15vw, 80px);
+            height: clamp(50px, 15vw, 80px);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(24px, 6vw, 36px);
+            font-weight: bold;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .button-rows {
+            margin: 10px 0;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+        
+        .number-btn {
+            width: clamp(45px, 12vw, 55px);
+            height: clamp(45px, 12vw, 55px);
+            padding: 0;
+            border-radius: 10px;
+            font-size: clamp(16px, 4vw, 20px);
+        }
+        
+        .stats {
+            color: #333;
+        }
+        
+        .stats h3 {
+            margin: 0 0 8px 0;
+            color: #667eea;
+            font-size: clamp(14px, 3.5vw, 18px);
+        }
+        
+        .stat-item {
+            margin: 5px 0;
+            font-size: clamp(12px, 3vw, 16px);
+        }
+
+        .stat-rows {
+            margin: 10px 0;
+        }
+        
+        .stat-row {
+            display: flex;
+            gap: 8px;
+            justify-content: left;
+            margin-bottom: 8px;        }
+        
+        .number-stats {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #e5e7eb;
+            color: #333;
+            overflow-x: auto;
+        }
+        
+        .number-stats h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: clamp(14px, 3.5vw, 18px);
+        }
+        
+        .number-grid {
+            display: grid;
+            grid-template-columns: auto repeat(10, 1fr);
+            gap: 3px;
+            margin-top: 10px;
+            font-size: clamp(10px, 2.5vw, 14px);
+            min-width: 350px;
+        }
+        
+        .grid-header {
+            font-weight: bold;
+            text-align: center;
+            padding: 4px 2px;
+            background: #f3f4f6;
+        }
+        
+        .grid-cell {
+            text-align: center;
+            padding: 4px 2px;
+            background: #f9fafb;
+            border-radius: 3px;
+        }
+        
+        .grid-label {
+            font-weight: bold;
+            padding: 4px 2px;
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+        /* Mobile styles */
+        @media (max-width: 500px) {
+            .main-content {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .right-section {
+                text-align: center;
+                width: 100%;
+            }
+            
+            .stat-row {
+                justify-content: center;
+            }
+            
+            .stats {
+                padding-top: 15px;
+                border-top: 2px solid #e5e7eb;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Multiplication Practice</h1>
+        <div class="feedback" id="feedback"></div>
+        
+        <div class="numbers">
+            <div class="number-box" id="num1">?</div>
+            <div class="times-sign">x</div>
+            <div class="number-box" id="num2">?</div>
+            <div class="equals-sign">=</div>
+            <div class="number-box" id="answerdisplay">?</div>
+        </div>
+        
+        <div class="main-content">
+            <div class="left-section">
+                <div class="button-rows">
+                    <div class="button-row">
+                        <button class="number-btn" onclick="appendNumber(7)">7</button>
+                        <button class="number-btn" onclick="appendNumber(8)">8</button>
+                        <button class="number-btn" onclick="appendNumber(9)">9</button>
+                    </div>
+                    <div class="button-row">
+                        <button class="number-btn" onclick="appendNumber(4)">4</button>
+                        <button class="number-btn" onclick="appendNumber(5)">5</button>
+                        <button class="number-btn" onclick="appendNumber(6)">6</button>
+                    </div>
+                    <div class="button-row">
+                        <button class="number-btn" onclick="appendNumber(1)">1</button>
+                        <button class="number-btn" onclick="appendNumber(2)">2</button>
+                        <button class="number-btn" onclick="appendNumber(3)">3</button>
+                    </div>
+                    <div class="button-row">
+                        <button class="number-btn" onclick="appendNumber(0)">0</button>
+                        <button class="number-btn" onclick="removeNumber()">X</button>
+                        <button class="number-btn" onclick="checkAnswer()">=</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-section">
+                <div class="stat-rows">
+                    <div class="stat-row">
+						<button class="new-problem-btn" onclick="generateNumbers()">New Problem</button>
+					</div>
+					<div class="stat-row">
+						<h3>Statistics</h3>
+					</div>
+					<div class="stat-row">Problems: <span id="problemCount">0</span></div>
+					<div class="stat-row">
+						<div class="stat-item">Correct: <span id="correctCount">0</span></div>
+						<div class="stat-item">Incorrect: <span id="incorrectCount">0</span></div>
+					</div>
+					<div class="stat-row">Average Time: <span id="avgTime">0.0</span> seconds</div>
+					</div>
+				</div>
+                
+            </div>
+			<div class="number-stats">
+				<h3>Number Statistics</h3>
+				<div class="number-grid" id="numberGrid"></div>
+			</div>
+        </div>
+        
+    </div>
+
+    <script>
+        let currentAnswer = 0;
+        let currentNum1 = 0;
+        let currentNum2 = 0;
+        let startTime = 0;
+        let problemCount = 0;
+        let correctCount = 0;
+        let incorrectCount = 0;
+        let totalTime = 0;
+        let answered = false;
+        let problemActive = false;
+        
+        let numberStats = {};
+        for (let i = 1; i <= 10; i++) {
+            numberStats[i] = { correct: 0, incorrect: 0, totalTime: 0 };
+        }
+        
+        function updateNumberGrid() {
+            const grid = document.getElementById('numberGrid');
+            let html = '<div class="grid-header"></div>';
+            
+            for (let i = 1; i <= 10; i++) {
+                html += `<div class="grid-header">${i}</div>`;
+            }
+            
+            html += '<div class="grid-label">Correct:</div>';
+            for (let i = 1; i <= 10; i++) {
+                html += `<div class="grid-cell">${numberStats[i].correct}</div>`;
+            }
+            
+            html += '<div class="grid-label">Incorrect:</div>';
+            for (let i = 1; i <= 10; i++) {
+                html += `<div class="grid-cell">${numberStats[i].incorrect}</div>`;
+            }
+
+            html += '<div class="grid-label">Avg Time:</div>';
+            for (let i = 1; i <= 10; i++) {
+                if (numberStats[i].correct != 0) {
+                    html += `<div class="grid-cell">${(numberStats[i].totalTime / numberStats[i].correct).toFixed(1)}</div>`;
+                } else {
+                    html += `<div class="grid-cell">0</div>`;
+                }
+            }
+            
+            grid.innerHTML = html;
+        }
+        
+        function generateNumbers() {
+            currentNum1 = Math.floor(Math.random() * 10) + 1;
+            currentNum2 = Math.floor(Math.random() * 10) + 1;
+            
+            document.getElementById('num1').textContent = currentNum1;
+            document.getElementById('num2').textContent = currentNum2;
+            document.getElementById('feedback').innerHTML = '';
+            document.getElementById('feedback').className = 'feedback';
+            document.getElementById('answerdisplay').textContent = "?";
+            
+            problemCount++;
+            document.getElementById('problemCount').textContent = problemCount;
+            
+            startTime = Date.now();
+            answered = false;
+            problemActive = true;
+            currentAnswer = 0;
+        }
+        
+        function checkAnswer() {
+            if (!problemActive || answered) return;
+            
+            const correctAnswer = currentNum1 * currentNum2;
+            const feedbackElement = document.getElementById('feedback');
+            const elapsedTime = (Date.now() - startTime) / 1000;
+            const timeText = elapsedTime.toFixed(1) + 's';
+            
+            if (currentAnswer === correctAnswer) {
+                correctCount++;
+                document.getElementById('correctCount').textContent = correctCount;
+                
+                feedbackElement.innerHTML = `<div>GREAT!</div><div class="time-display">${timeText}</div>`;
+                feedbackElement.className = 'feedback correct';
+                
+                totalTime += elapsedTime;
+                const avgTime = (totalTime / correctCount).toFixed(1);
+                document.getElementById('avgTime').textContent = avgTime;
+
+                numberStats[currentNum1].correct++;
+                numberStats[currentNum2].correct++;
+                numberStats[currentNum1].totalTime += elapsedTime;
+                numberStats[currentNum2].totalTime += elapsedTime;
+                updateNumberGrid();
+                
+                answered = true;
+            } else {
+                incorrectCount++;
+                document.getElementById('incorrectCount').textContent = incorrectCount;
+                
+                numberStats[currentNum1].incorrect++;
+                numberStats[currentNum2].incorrect++;
+                
+                feedbackElement.innerHTML = `<div>Try Again</div><div class="time-display">${timeText}</div>`;
+                feedbackElement.className = 'feedback incorrect';
+				currentAnswer = 0;
+            }
+        }
+
+        function appendNumber(n) {
+            if (!problemActive || answered) return;
+            currentAnswer = currentAnswer === 0 ? n : (currentAnswer * 10) + n;
+            document.getElementById('answerdisplay').textContent = currentAnswer || "?";
+        }
+
+        function removeNumber() {
+            if (!problemActive || answered) return;
+            currentAnswer = Math.floor(currentAnswer / 10);
+            document.getElementById('answerdisplay').textContent = currentAnswer || "?";
+        }
+        
+        updateNumberGrid();
+    </script>
+</body>
+</html>
