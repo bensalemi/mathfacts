@@ -189,7 +189,7 @@
         
         .number-grid {
             display: grid;
-            grid-template-columns: auto repeat(3, 1fr);
+            grid-template-columns: auto repeat(4, 1fr);
             gap: 3px;
             margin-top: 10px;
             font-size: clamp(10px, 2.5vw, 14px);

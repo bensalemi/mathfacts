@@ -13,7 +13,7 @@
         
         <div class="numbers">
             <div class="number-box" id="num1">?</div>
-            <div class="plus-sign">+</div>
+            <div class="plus-sign" id="operator">+</div>
             <div class="number-box" id="num2">?</div>
             <div class="equals-sign">=</div>
             <div class="number-box" id="answerdisplay">?</div>
@@ -40,7 +40,7 @@
                     <div class="button-row">
                         <button class="number-btn" onclick="appendNumber(0)">0</button>
                         <button class="number-btn" onclick="removeNumber()">X</button>
-                        <button class="number-btn" onclick="checkAnswer()">✓</button>
+                        <button class="number-btn" onclick="checkAnswerCommon()">✓</button>
                     </div>
                 </div>
             </div>
@@ -48,7 +48,8 @@
             <div class="right-section">
                 <div class="stat-rows">
                     <div class="stat-row">
-						<button class="new-problem-btn" onclick="generateNumbers()">New Problem</button>
+						<button class="new-problem-btn" onclick="generateNumbers()" id="newProblem">New Problem</button>
+                        <button class="new-problem-btn" onclick="checkAnswerCommon()">Check Answer</button>
 					</div>
 					<div class="stat-row">
 						<h3>Statistics</h3>
@@ -57,6 +58,7 @@
 					<div class="stat-row">
 						<div class="stat-item">Correct: <span id="correctCount">0</span></div>
 						<div class="stat-item">Incorrect: <span id="incorrectCount">0</span></div>
+						<div class="stat-item">Skipped: <span id="skippedCount">0</span></div>
 					</div>
 					<div class="stat-row">Average Time: <span id="avgTime">0.0</span> seconds</div>
 					</div>
@@ -70,7 +72,7 @@
         </div>
         
     </div>
-
+    <script src="commonfunctions.js"></script>
     <script>
         let currentAnswer = 0;
         let currentNum1 = 0;
@@ -79,50 +81,22 @@
         let problemCount = 0;
         let correctCount = 0;
         let incorrectCount = 0;
+        let skippedCount = 0;
         let totalTime = 0;
         let answered = false;
         let problemActive = false;
+        let currentProblemArray = generateProblemArray();
+        let currentProblemIdx = 0;
         
         let numberStats = {};
         for (let i = 1; i <= 10; i++) {
-            numberStats[i] = { correct: 0, incorrect: 0, totalTime: 0 };
-        }
-        
-        function updateNumberGrid() {
-            const grid = document.getElementById('numberGrid');
-            let html = '<div class="grid-header"></div><div class="grid-header">Correct:</div><div class="grid-header">Incorrect:</div><div class="grid-header">Avg Time:</div>';
-            
-            for (let i = 1; i <= 10; i++) {
-                html += `<div class="grid-label">${i}</div>`;
-                html += `<div class="grid-cell">${numberStats[i].correct}</div>`;
-                html += `<div class="grid-cell">${numberStats[i].incorrect}</div>`;
-                if (numberStats[i].correct != 0) {
-                    html += `<div class="grid-cell">${(numberStats[i].totalTime / numberStats[i].correct).toFixed(1)}</div>`;
-                } else {
-                    html += `<div class="grid-cell">0</div>`;
-                }
-            }
-                        
-            grid.innerHTML = html;
+            numberStats[i] = { correct: 0, incorrect: 0, skipped: 0, totalTime: 0 };
         }
         
         function generateNumbers() {
-            currentNum1 = Math.floor(Math.random() * 10) + 1;
-            currentNum2 = Math.floor(Math.random() * 10) + 1;
             
-            document.getElementById('num1').textContent = currentNum1;
-            document.getElementById('num2').textContent = currentNum2;
-            document.getElementById('feedback').innerHTML = '';
-            document.getElementById('feedback').className = 'feedback';
-            document.getElementById('answerdisplay').textContent = "?";
-            
-            problemCount++;
-            document.getElementById('problemCount').textContent = problemCount;
-            
-            startTime = Date.now();
-            answered = false;
-            problemActive = true;
-            currentAnswer = 0;
+            nextProblem();
+
         }
         
         function checkAnswer() {
@@ -150,6 +124,8 @@
                 numberStats[currentNum2].totalTime += elapsedTime;
                 updateNumberGrid();
                 
+                document.getElementById('newProblem').textContent = "New Problem";
+
                 answered = true;
             } else {
                 incorrectCount++;
@@ -178,5 +154,6 @@
         
         updateNumberGrid();
     </script>
+     
 </body>
 </html>
