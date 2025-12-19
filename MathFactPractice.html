@@ -568,10 +568,10 @@
             {
                 
                 let nbr = parseInt(practiceNumberSelection);
-                console.log('Number selected:', nbr);
+                //console.log('Number selected:', nbr);
                 for (i=0; i<array2.length; i++) {
                     
-                    console.log('Assigning index:', i);
+                    //console.log('Assigning index:', i);
                     array2[i] = nbr;
                 }
 
@@ -755,8 +755,11 @@
                 } else if (operation == 'division') {
                     operatorField.textContent = '÷';
                 }
-                problemActive = false;
-                nextProblem();
+
+                if (problemActive) {
+                    problemActive = false;
+                    nextProblem();
+                }
                 //console.log('Selected operation:', operation);
             }
         });
@@ -771,8 +774,10 @@
                 practiceNumberSelection = e.target.dataset.number;
 
                 currentProblemArray = generateProblemArray();
-                problemActive = false;
-                nextProblem();
+                if (problemActive) {
+                    problemActive = false;
+                    nextProblem();
+                }
 
                 //console.log('Selected number:', number);
             }
