@@ -498,7 +498,6 @@
         let incorrectCount = 0;
         let skippedCount = 0;
         let totalTime = 0;
-        let problemAnswered = false;
         let problemActive = false;
         let starterArray = [1,2,3,4,5,6,7,8,9,10];
         let currentProblemIdx = 0;
@@ -510,20 +509,22 @@
         resetStats();
         
         function appendNumber(n) {
-            if (!problemActive || problemAnswered) return;
-            currentAnswer = currentAnswer === 0 ? n : (currentAnswer * 10) + n;
+            if (!problemActive) return;
+
+            //add number, but only up to 3 digits
+            currentAnswer = (currentAnswer < 100) ? (currentAnswer * 10) + n : currentAnswer; 
+            
             answerElement.textContent = currentAnswer || "?";
         }
 
         function removeNumber() {
-            if (!problemActive || problemAnswered) return;
+            if (!problemActive) return;
             currentAnswer = Math.floor(currentAnswer / 10);
             answerElement.textContent = currentAnswer || "?";
         }
         
         function resetProblem() {
             problemActive = false;
-            problemAnswered = false;
             correctAnswer = 0;
             currentAnswer = 0;
             currentNum1 = 0;
@@ -627,7 +628,7 @@
             let operator = operatorElement.textContent;
 
             //skip problem
-            if(problemActive && !problemAnswered) {
+            if(problemActive) {
                 let elapsedTime = (Date.now() - startTime) / 1000;
 
                 totalTime += elapsedTime;
@@ -646,7 +647,6 @@
 
                 updateNumberStats();
                 problemActive = false;
-                problemAnswered = false;
                 return;
             }
 
@@ -702,39 +702,19 @@
             newProblemElement.textContent = "Skip";
 
             startTime = Date.now();
-            problemAnswered = false;
             problemActive = true;
             currentAnswer = 0;
         }
 
         function checkAnswerCommon() {
 
-            if (!problemActive || problemAnswered) {
-                console.log('Skipped check. No problem active.');
+            if (!problemActive) {
+                //console.log('Skipped check. No problem active.');
                    return;
             }
 
-            //let operator = operatorElement.textContent;
-            //let correctAnswer = 0;
             let elapsedTime = (Date.now() - startTime) / 1000;
             let timeText = elapsedTime.toFixed(1) + 's';
-
-            
-            // if (operator === "+") {
-            //     correctAnswer = currentNum1 + currentNum2;
-            // }   
-            // else if (operator === "x") {
-            //     correctAnswer = currentNum1 * currentNum2;
-            // }
-            // else if (operator === "-") {
-            //     correctAnswer = currentNum1;
-            // }
-            // else if (operator === "÷") {
-            //     correctAnswer = currentNum1;
-            // }
-            // else {
-            //     console.log('Selected operation:', operator);
-            // }
 
             totalTime += elapsedTime;
 
@@ -744,13 +724,11 @@
                 feedbackElement.innerHTML = `<div>GREAT!</div><div class="time-display">${timeText}</div>`;
                 feedbackElement.className = 'feedback correct';
                 
-
                 numberStats[currentNum1].correct++;
                 numberStats[currentNum2].correct++;
                 numberStats[currentNum1].totalTime += elapsedTime;
                 numberStats[currentNum2].totalTime += elapsedTime;
 
-                problemAnswered = true;
             } else {
                 incorrectCount++;
                 feedbackElement.innerHTML = `<div>Oof! The answer was ${correctAnswer}</div><div class="time-display">${timeText}</div>`;
@@ -760,12 +738,10 @@
                 numberStats[currentNum2].incorrect++;
                 numberStats[currentNum1].totalTime += elapsedTime;
                 numberStats[currentNum2].totalTime += elapsedTime;
-
-                
             }
 
             updateNumberStats();
-            problemAnswered = true;
+            problemActive = false;
             newProblemElement.textContent = "New Problem";
 
         }
