@@ -428,7 +428,7 @@
                     <div class="button-row">
                         <button class="number-btn" onclick="appendNumber(0)">0</button>
                         <button class="number-btn" onclick="removeNumber()">X</button>
-                        <button class="number-btn" onclick="checkAnswerCommon()">✓</button>
+                        <button class="number-btn" onclick="checkAnswerCommon()" id="checkmarkAnswerBtn">✓</button>
                     </div>
                 </div>
             </div>
@@ -436,8 +436,8 @@
             <div class="right-section">
                 <div class="stat-rows">
                     <div class="stat-row">
-						<button class="new-problem-btn" onclick="generateNumbers()" id="newProblem">New Problem</button>
-                        <button class="new-problem-btn" onclick="checkAnswerCommon()">Check Answer</button>
+						<button class="new-problem-btn" onclick="nextOrSkipProblem()" id="newProblem">New Problem</button>
+                        <button class="new-problem-btn" onclick="checkAnswerCommon()" id="checkAnswerBtn">Check Answer</button>
 					</div>
 					<div class="stat-row">
 						<h3>Statistics</h3>
@@ -461,65 +461,108 @@
         
     </div>
     <script>
-        const burgerIcon = document.getElementById('burgerIcon');
-        const menu = document.getElementById('menu');
-        const overlay = document.getElementById('overlay');
-        const operationTitle = document.getElementById('operationTitle');
-        const operationItems = document.getElementById('operationItems');
-        const numbersTitle = document.getElementById('numbersTitle');
-        const numbersItems = document.getElementById('numbersItems');
+        /* seems problematic to use globals here. could we clean this up somehow? */
 
-        const titleField = document.getElementById('title');
-        const operatorField = document.getElementById('operator');
+        const burgerElement = document.getElementById('burgerIcon');
+        const menuElement = document.getElementById('menu');
+        const overlayElement = document.getElementById('overlay');
+        const opTitleElement = document.getElementById('operationTitle');
+        const opItemsElement = document.getElementById('operationItems');
+        const numbersTitleElement = document.getElementById('numbersTitle');
+        const numbersItemsElement = document.getElementById('numbersItems');
+
+        const titleFieldElement = document.getElementById('title');
+        const operatorElement = document.getElementById('operator');
+        const answerElement = document.getElementById('answerdisplay');
+        const num1Element = document.getElementById('num1');
+        const num2Element = document.getElementById('num2');
+        const feedbackElement = document.getElementById('feedback');
+        const newProblemElement = document.getElementById('newProblem');
+        const checkAnswerBtnElement =  document.getElementById('checkAnswerBtn');
+        const checkmarkAnswerBtnElement =  document.getElementById('checkmarkAnswerBtn');
+
+        const problemCntElement = document.getElementById('problemCount');
+        const correctCntElement = document.getElementById('correctCount');
+        const incorrectCntElement = document.getElementById('incorrectCount');
+        const skippedCntElement = document.getElementById('skippedCount');
+        const avgTimeElement = document.getElementById('avgTime');
+        const gridElement = document.getElementById('numberGrid');
 
         let currentAnswer = 0;
         let currentNum1 = 0;
         let currentNum2 = 0;
+        let correctAnswer = 0;
         let startTime = 0;
         let problemCount = 0;
         let correctCount = 0;
         let incorrectCount = 0;
         let skippedCount = 0;
         let totalTime = 0;
-        let answered = false;
+        let problemAnswered = false;
         let problemActive = false;
         let starterArray = [1,2,3,4,5,6,7,8,9,10];
         let currentProblemIdx = 0;
-        let practiceNumberSelection = 'All';
+        let practiceNumberSelection = 'all';
         let currentProblemArray = generateProblemArray();
 
-        let numberStats = {};
-        for (let i = 1; i <= 10; i++) {
-            numberStats[i] = { correct: 0, incorrect: 0, skipped: 0, totalTime: 0 };
-        }
+        burgerElement.classList.toggle('visible');
 
-        burgerIcon.classList.toggle('visible');
-
-        updateNumberGrid();
-        
-        function generateNumbers() {
-            
-            nextProblem();
-
-        }
+        resetStats();
         
         function appendNumber(n) {
-            if (!problemActive || answered) return;
+            if (!problemActive || problemAnswered) return;
             currentAnswer = currentAnswer === 0 ? n : (currentAnswer * 10) + n;
-            document.getElementById('answerdisplay').textContent = currentAnswer || "?";
+            answerElement.textContent = currentAnswer || "?";
         }
 
         function removeNumber() {
-            if (!problemActive || answered) return;
+            if (!problemActive || problemAnswered) return;
             currentAnswer = Math.floor(currentAnswer / 10);
-            document.getElementById('answerdisplay').textContent = currentAnswer || "?";
+            answerElement.textContent = currentAnswer || "?";
         }
         
+        function resetProblem() {
+            problemActive = false;
+            problemAnswered = false;
+            correctAnswer = 0;
+            currentAnswer = 0;
+            currentNum1 = 0;
+            currentNum2 = 0;
+
+            num1Element.textContent = "?";
+            num2Element.textContent = "?"
+            answerElement.textContent = '?';
+            newProblemElement.textContent = "New Problem";
+            feedbackElement.textContent = "";
         
+        }        
 
+        function resetStats() {
+            numberStats = {};
+            for (let i = 1; i <= 10; i++) {
+                numberStats[i] = { correct: 0, incorrect: 0, skipped: 0, totalTime: 0 };
+            }
+            problemCount = 0;
+            correctCount = 0;
+            incorrectCount = 0;
+            skippedCount = 0;
+            totalTime = 0;
+            updateNumberStats();
+        }
 
-        function updateNumberGrid() {
-            const grid = document.getElementById('numberGrid');
+        function updateNumberStats() {
+
+            problemCntElement.textContent = problemCount;
+            correctCntElement.textContent = correctCount;
+            incorrectCntElement.textContent =incorrectCount ;
+            skippedCntElement.textContent = skippedCount;
+
+            if (problemCount > 0) {
+                const avgTime = (totalTime / problemCount).toFixed(1);
+                avgTimeElement.textContent = avgTime;            
+            }
+            else { avgTimeElement.textContent = ""; }
+            
             let html = '<div class="grid-header"></div><div class="grid-header">Correct:</div><div class="grid-header">Incorrect:</div><div class="grid-header">Skipped:</div><div class="grid-header">Avg Time:</div>';
             
             for (let i = 1; i <= 10; i++) {
@@ -531,32 +574,30 @@
                 if (total > 0) {
                     html += `<div class="grid-cell">${(numberStats[i].totalTime / total).toFixed(1)}</div>`;
                 } else {
-                    html += `<div class="grid-cell">0</div>`;
+                    html += `<div class="grid-cell"></div>`;
                 }
             }
                         
-            grid.innerHTML = html;
+            gridElement.innerHTML = html;
         }
 
         function shuffleArray(inputArray) {
+
             array = [...inputArray];
-        let currentIndex = array.length;
-        let randomIndex;
+            let currentIndex = array.length;
+            let randomIndex;
 
-        // While there remain elements to shuffle.
-        while (currentIndex !== 0) {
-            // Pick a remaining element.
-            randomIndex = Math.floor(Math.random() * currentIndex);
-            currentIndex--;
+            // While there remain elements to shuffle.
+            while (currentIndex !== 0) {
+                // Pick a remaining element.
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
 
-            // And swap it with the current element.
-            [array[currentIndex], array[randomIndex]] = [
-            array[randomIndex],
-            array[currentIndex],
-            ];
-        }
+                // And swap it with the current element.
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex],array[currentIndex],];
+            }
 
-        return array;
+            return array;
         }
 
         function generateProblemArray() 
@@ -564,7 +605,7 @@
             array1 = shuffleArray(starterArray);
             array2 = shuffleArray(starterArray);
 
-            if (practiceNumberSelection != 'All')
+            if (practiceNumberSelection != "all")
             {
                 
                 let nbr = parseInt(practiceNumberSelection);
@@ -579,46 +620,35 @@
             return [array1,array2];
         }
 
-        function nextProblem() {
-            /* seems problematic to use globals here. should clean this up somehow */
+        
+        function nextOrSkipProblem() {
+            
+            let disp1 = 0;
+            let operator = operatorElement.textContent;
 
-            if (problemActive && !answered)
-            {
-                let operator = document.getElementById('operator').textContent;
-                let correctAnswer = 0;
-                let feedbackElement = document.getElementById('feedback');
+            //skip problem
+            if(problemActive && !problemAnswered) {
                 let elapsedTime = (Date.now() - startTime) / 1000;
-                let timeText = elapsedTime.toFixed(1) + 's';
+
                 totalTime += elapsedTime;
                 const avgTime = (totalTime / currentProblemIdx).toFixed(1);
+                avgTimeElement.textContent = avgTime;            
 
-                if (operator === "+") {
-                    correctAnswer = currentNum1 + currentNum2;
-                }   
-                else if (operator === "x") {
-                    correctAnswer = currentNum1 * currentNum2;
-                }
-                else {
-                    correctAnswer = currentNum1;
-                }    
+                feedbackElement.textContent = `Skipped. The answer was ${correctAnswer}`;
+                skippedCount++;
                 numberStats[currentNum1].skipped++;
                 numberStats[currentNum2].skipped++;
                 numberStats[currentNum1].totalTime += elapsedTime;
                 numberStats[currentNum2].totalTime += elapsedTime;
 
-                skippedCount++;
-                feedbackElement.innerHTML = `<div>Skipped! The answer was ${correctAnswer}</div><div class="time-display">${timeText}</div>`;
-                feedbackElement.className = 'feedback incorrect';
-                document.getElementById('skippedCount').textContent = skippedCount;
-                updateNumberGrid();
+                skippedCntElement.textContent = skippedCount;
+                newProblemElement.textContent = "New Problem";
 
-                document.getElementById('newProblem').textContent = "New Problem";
+                updateNumberStats();
                 problemActive = false;
+                problemAnswered = false;
                 return;
             }
-            
-            let disp1 = 0;
-            let operator = document.getElementById('operator').textContent;
 
             if (currentProblemIdx >= currentProblemArray[0].length) {
                 currentProblemArray = generateProblemArray();
@@ -629,6 +659,26 @@
             currentNum2 = currentProblemArray[1][currentProblemIdx];
             currentProblemIdx++;
 
+            if (operator === "+") {
+                disp1 = currentNum1;
+                correctAnswer = currentNum1 + currentNum2;
+            }   
+            else if (operator === "x") {
+                disp1 = currentNum1;
+                correctAnswer = currentNum1 * currentNum2;
+            }
+            else if (operator === "-") {
+                disp1 = currentNum1 + currentNum2
+                correctAnswer = currentNum1;
+            }
+            else if (operator === "÷") {
+                disp1 = currentNum1 * currentNum2;
+                correctAnswer = currentNum1;
+            }
+            else {
+                feedbackElement.textContent = `Something went wrong. Operation ${operator} unkown.`;
+                console.log('Selected operation:', operator);
+            }
 
             if (operator === "+" || operator === "x") {
                 disp1 = currentNum1;
@@ -640,66 +690,69 @@
                 disp1 = currentNum1 * currentNum2;
             }
 
-            document.getElementById('num1').textContent = disp1;
-            document.getElementById('num2').textContent = currentNum2;
-            document.getElementById('answerdisplay').textContent = "?";
-            document.getElementById('feedback').innerHTML = '';
-            document.getElementById('feedback').className = 'feedback';
+            num1Element.textContent = disp1;
+            num2Element.textContent = currentNum2;
+            answerElement.textContent = "?";
+            feedbackElement.innerHTML = '';
+            feedbackElement.className = 'feedback';
 
             problemCount++;
-            document.getElementById('problemCount').textContent = problemCount;
+            problemCntElement.textContent = problemCount;
             
-            document.getElementById('newProblem').textContent = "Skip";
+            newProblemElement.textContent = "Skip";
 
             startTime = Date.now();
-            answered = false;
+            problemAnswered = false;
             problemActive = true;
             currentAnswer = 0;
         }
 
         function checkAnswerCommon() {
 
-            if (!problemActive || answered) return;
+            if (!problemActive || problemAnswered) {
+                console.log('Skipped check. No problem active.');
+                   return;
+            }
 
-            let operator = document.getElementById('operator').textContent;
-            let correctAnswer = 0;
-            let feedbackElement = document.getElementById('feedback');
+            //let operator = operatorElement.textContent;
+            //let correctAnswer = 0;
             let elapsedTime = (Date.now() - startTime) / 1000;
             let timeText = elapsedTime.toFixed(1) + 's';
 
             
-            if (operator === "+") {
-                correctAnswer = currentNum1 + currentNum2;
-            }   
-            else if (operator === "x") {
-                correctAnswer = currentNum1 * currentNum2;
-            }
-            else {
-                correctAnswer = currentNum1;
-            }    
+            // if (operator === "+") {
+            //     correctAnswer = currentNum1 + currentNum2;
+            // }   
+            // else if (operator === "x") {
+            //     correctAnswer = currentNum1 * currentNum2;
+            // }
+            // else if (operator === "-") {
+            //     correctAnswer = currentNum1;
+            // }
+            // else if (operator === "÷") {
+            //     correctAnswer = currentNum1;
+            // }
+            // else {
+            //     console.log('Selected operation:', operator);
+            // }
 
             totalTime += elapsedTime;
-            const avgTime = (totalTime / currentProblemIdx).toFixed(1);
-            
+
             if (currentAnswer === correctAnswer) {
                 correctCount++;
-                document.getElementById('correctCount').textContent = correctCount;
                 
                 feedbackElement.innerHTML = `<div>GREAT!</div><div class="time-display">${timeText}</div>`;
                 feedbackElement.className = 'feedback correct';
                 
-                document.getElementById('avgTime').textContent = avgTime;
 
                 numberStats[currentNum1].correct++;
                 numberStats[currentNum2].correct++;
                 numberStats[currentNum1].totalTime += elapsedTime;
                 numberStats[currentNum2].totalTime += elapsedTime;
 
-                answered = true;
+                problemAnswered = true;
             } else {
                 incorrectCount++;
-                document.getElementById('incorrectCount').textContent = incorrectCount;
-
                 feedbackElement.innerHTML = `<div>Oof! The answer was ${correctAnswer}</div><div class="time-display">${timeText}</div>`;
                 feedbackElement.className = 'feedback incorrect';
                 
@@ -709,77 +762,77 @@
                 numberStats[currentNum2].totalTime += elapsedTime;
 
                 
+            }
+
+            updateNumberStats();
+            problemAnswered = true;
+            newProblemElement.textContent = "New Problem";
+
         }
 
-        updateNumberGrid();
-        answered = true;
-        document.getElementById('newProblem').textContent = "New Problem";
-
-        }
-        // Toggle menu
-        burgerIcon.addEventListener('click', () => {
-            menu.classList.toggle('open');
-            overlay.classList.toggle('visible');
+        // Setup toggle menu
+        burgerElement.addEventListener('click', () => {
+            menuElement.classList.toggle('open');
+            overlayElement.classList.toggle('visible');
         });
 
-        overlay.addEventListener('click', () => {
-            menu.classList.remove('open');
-            overlay.classList.remove('visible');
+        overlayElement.addEventListener('click', () => {
+            menuElement.classList.remove('open');
+            overlayElement.classList.remove('visible');
         });
 
         // Toggle submenu sections
-        operationTitle.addEventListener('click', () => {
-            operationItems.classList.toggle('open');
+        opTitleElement.addEventListener('click', () => {
+            opItemsElement.classList.toggle('open');
         });
 
-        numbersTitle.addEventListener('click', () => {
-            numbersItems.classList.toggle('open');
+        numbersTitleElement.addEventListener('click', () => {
+            numbersItemsElement.classList.toggle('open');
         });
 
         // Handle operation selection
-        operationItems.addEventListener('click', (e) => {
+        opItemsElement.addEventListener('click', (e) => {
             if (e.target.classList.contains('menu-item')) {
                 document.querySelectorAll('#operationItems .menu-item').forEach(item => {
                     item.classList.remove('selected');
                 });
                 e.target.classList.add('selected');
                 const operation = e.target.dataset.operation;
-                titleField.innerHTML = operation.charAt(0).toUpperCase() + operation.slice(1) + ' Practice';
+                titleFieldElement.innerHTML = operation.charAt(0).toUpperCase() + operation.slice(1) + ' Practice';
 
                 if (operation == 'addition') {
-                    operatorField.textContent = '+';
+                    operatorElement.textContent = "+";
                 } else if (operation == 'subtraction') {
-                    operatorField.textContent = '-';
+                    operatorElement.textContent = "-";
                 } else if (operation == 'multiplication') {
-                    operatorField.textContent = 'x';
+                    operatorElement.textContent = "x";
                 } else if (operation == 'division') {
-                    operatorField.textContent = '÷';
+                    operatorElement.textContent = "÷";
                 }
 
-                if (problemActive) {
-                    problemActive = false;
-                    nextProblem();
-                }
+                resetProblem();
+                resetStats();
+                
                 //console.log('Selected operation:', operation);
             }
         });
 
         // Handle numbers selection
-        numbersItems.addEventListener('click', (e) => {
+        numbersItemsElement.addEventListener('click', (e) => {
             if (e.target.classList.contains('menu-item')) {
                 document.querySelectorAll('#numbersItems .menu-item').forEach(item => {
                     item.classList.remove('selected');
                 });
                 e.target.classList.add('selected');
+
                 practiceNumberSelection = e.target.dataset.number;
 
                 currentProblemArray = generateProblemArray();
-                if (problemActive) {
-                    problemActive = false;
-                    nextProblem();
-                }
 
-                //console.log('Selected number:', number);
+                resetProblem();
+                resetStats();
+
+                //console.log('Selected number:', practiceNumberSelection);
             }
         });
         
