@@ -36,7 +36,19 @@
             margin: 0 0 15px 0;
             font-size: clamp(20px, 5vw, 28px);
         }
-        
+
+        h2 {
+            color: #333;
+            margin: 0 0 15px 0;
+            font-size: clamp(18px, 4.5vw, 16px);
+        }        
+
+        h3 {
+            color: #333;
+            margin: 0 0 15px 0;
+            font-size: clamp(16px, 4vw, 14px);
+        }        
+
         .new-problem-btn {
             width: clamp(135px, 12vw, 55px);
             height: clamp(45px, 12vw, 55px);
@@ -278,7 +290,8 @@
         }
 
         .menu-section-title {
-            padding: 15px 20px;
+            font-size: clamp(18px, 4.5vw, 16px);
+            padding: 10px 2px;
             font-weight: bold;
             color: #333;
             background-color: #f0f0f0;
@@ -299,8 +312,10 @@
         }
 
         .menu-item {
-            padding: 12px 20px 12px 40px;
-            color: #666;
+            margin: 0 0 15px 0;
+            font-size: clamp(16px, 4vw, 14px);
+            font-weight: bold;
+            color: #333;
             cursor: pointer;
             transition: background-color 0.2s;
         }
@@ -312,7 +327,7 @@
         .menu-item.selected {
             background-color: #e3f2fd;
             color: #1976d2;
-            font-weight: 500;
+            font-weight: bold;
         }
 
         .overlay {
@@ -513,7 +528,7 @@
 
             //add number, but only up to 3 digits
             currentAnswer = (currentAnswer < 100) ? (currentAnswer * 10) + n : currentAnswer; 
-            
+
             answerElement.textContent = currentAnswer || "?";
         }
 
@@ -759,6 +774,7 @@
 
         // Toggle submenu sections
         opTitleElement.addEventListener('click', () => {
+            console.log('Running opItemsTitle click listener');            
             opItemsElement.classList.toggle('open');
         });
 
@@ -768,11 +784,14 @@
 
         // Handle operation selection
         opItemsElement.addEventListener('click', (e) => {
+            console.log('Running opItemsElement click listener');
             if (e.target.classList.contains('menu-item')) {
+                console.log('Running opItems selection logic');
                 document.querySelectorAll('#operationItems .menu-item').forEach(item => {
                     item.classList.remove('selected');
                 });
                 e.target.classList.add('selected');
+
                 const operation = e.target.dataset.operation;
                 titleFieldElement.innerHTML = operation.charAt(0).toUpperCase() + operation.slice(1) + ' Practice';
 
@@ -789,7 +808,7 @@
                 resetProblem();
                 resetStats();
                 
-                //console.log('Selected operation:', operation);
+                console.log('Selected operation:', operation);
             }
         });
 
