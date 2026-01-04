@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UFO Shooter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            margin: 0;
+            padding: 10px;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            color: #fff;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            border: 2px solid #fff;
+            background-color: #000;
+            max-width: 100%;
+            height: auto;
+            touch-action: none;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 500px;
+            padding: 0 10px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 15px 10px;
+            font-size: 18px;
+            background-color: #fff;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+            touch-action: manipulation;
+        }
+        
+        button:active {
+            background-color: #aaa;
+        }
+        
+        button:disabled {
+            background-color: #666;
+            color: #333;
+            cursor: not-allowed;
+        }
+        
+        .answer-btn {
+            flex: 1 1 calc(20% - 8px);
+            min-width: 60px;
+        }
+        
+        #startBtn {
+            flex: 1 1 100%;
+            margin-top: 5px;
+        }
+        
+        #score {
+            display: none;
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 5px;
+            }
+            
+            #gameCanvas {
+                width: 100%;
+            }
+            
+            .controls {
+                margin-top: 10px;
+                gap: 8px;
+            }
+            
+            button {
+                padding: 18px 10px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div class="controls">
+        <button id="answerBtn0" class="answer-btn" disabled>0</button>
+        <button id="answerBtn1" class="answer-btn" disabled>0</button>
+        <button id="answerBtn2" class="answer-btn" disabled>0</button>
+        <button id="answerBtn3" class="answer-btn" disabled>0</button>
+        <button id="answerBtn4" class="answer-btn" disabled>0</button>
+        <button id="startBtn">Start Game</button>
+    </div>
+    <div id="score">Score: 0</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const answerBtns = [
+            document.getElementById('answerBtn0'),
+            document.getElementById('answerBtn1'),
+            document.getElementById('answerBtn2'),
+            document.getElementById('answerBtn3'),
+            document.getElementById('answerBtn4')
+        ];
+        const scoreDisplay = document.getElementById('score');
+        
+        let gameRunning = false;
+        let score = 0;
+        let highScore = 0;
+        let wave = 1;
+        let ufos = [];
+        let laser = { x: canvas.width / 2 - 15, y: canvas.height - 62, width: 30, height: 50 };
+        let beam = { active: false, x: 0, y: 0, width: 2, height: 0 };
+        let missile = { active: false, x: 0, y: 0, targetUFO: null, trail: [] };
+        let explosion = { active: false, x: 0, y: 0, frame: 0 };
+        let waveMessage = { active: false, frame: 0 };
+        let gameOver = false;
+        let alien = { active: false, x: 0, y: 0, beaming: false, beamFrame: 0, running: false, targetX: 0, planting: false, plantFrame: 0 };
+        let mathProblem = { num1: 0, num2: 0, answer: 0 };
+        
+		function loadHighScore() {
+			const saved = localStorage.getItem('ufoShooterHighScore');
+			if (saved) {
+				highScore = parseInt(saved);
+			}
+		}
+
+		function saveHighScore() {
+			if (score > highScore) {
+				highScore = score;
+				localStorage.setItem('ufoShooterHighScore', highScore.toString());
+			}
+		}        
+        loadHighScore();
+        
+        function generateMathProblem() {
+            mathProblem.num1 = Math.floor(Math.random() * 12) + 1;
+            mathProblem.num2 = Math.floor(Math.random() * 12) + 1;
+            mathProblem.answer = mathProblem.num1 + mathProblem.num2;
+            
+            // Generate 5 answer choices, one correct and 4 wrong
+            const answers = [mathProblem.answer];
+            
+            while (answers.length < 5) {
+                const wrongAnswer = mathProblem.answer + Math.floor(Math.random() * 10) - 5;
+                if (wrongAnswer > 0 && wrongAnswer !== mathProblem.answer && !answers.includes(wrongAnswer)) {
+                    answers.push(wrongAnswer);
+                }
+            }
+            
+            // Shuffle answers
+            for (let i = answers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [answers[i], answers[j]] = [answers[j], answers[i]];
+            }
+            
+            // Set button text
+            for (let i = 0; i < 5; i++) {
+                answerBtns[i].textContent = answers[i];
+            }
+        }
+        
+        function drawUFO(ufo) {
+            ctx.fillStyle = '#fff';
+            // Bottom disc
+            ctx.beginPath();
+            ctx.ellipse(ufo.x + ufo.width/2, ufo.y + 7.5, ufo.width/2, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Top dome
+            ctx.beginPath();
+            ctx.ellipse(ufo.x + ufo.width/2, ufo.y + 5, ufo.width/3, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Windows on the dome
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(ufo.x + ufo.width/2 - 4, ufo.y + 5, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(ufo.x + ufo.width/2 + 4, ufo.y + 5, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Landing lights
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(ufo.x + 7, ufo.y + 10, 2.5, 1.5);
+            ctx.fillRect(ufo.x + 14, ufo.y + 10, 2.5, 1.5);
+            ctx.fillRect(ufo.x + 21, ufo.y + 10, 2.5, 1.5);
+        }
+        
+        function drawLaser() {
+            ctx.strokeStyle = '#fff';
+            ctx.fillStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            
+            const centerX = laser.x + laser.width / 2;
+            const baseY = canvas.height;
+            
+            // Ground line
+            ctx.fillRect(0, baseY - 2, canvas.width, 2);
+            
+            // Base platform (outline)
+            ctx.strokeRect(laser.x - 5, baseY - 10, laser.width + 10, 10);
+            
+            // Wide base (outline)
+            ctx.strokeRect(laser.x, baseY - 18, laser.width, 8);
+            
+            // Main body - octagonal tower (outline)
+            ctx.beginPath();
+            ctx.moveTo(laser.x + 6, baseY - 18);
+            ctx.lineTo(laser.x + 3, baseY - 38);
+            ctx.lineTo(laser.x + 6, baseY - 42);
+            ctx.lineTo(laser.x + 24, baseY - 42);
+            ctx.lineTo(laser.x + 27, baseY - 38);
+            ctx.lineTo(laser.x + 24, baseY - 18);
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Barrel support ring (outline)
+            ctx.beginPath();
+            ctx.arc(centerX, baseY - 42, 5, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Main barrel (outline) - taller
+            ctx.strokeRect(centerX - 3, baseY - 57, 6, 15);
+            
+            // Bubble spheres along barrel length
+            ctx.beginPath();
+            ctx.arc(centerX, baseY - 54, 2.5, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(centerX, baseY - 49, 2.5, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(centerX, baseY - 44, 2.5, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Barrel tip (outline)
+            ctx.strokeRect(centerX - 4, baseY - 60, 8, 3);
+            
+            // Side vents (hollow rectangles)
+            ctx.strokeRect(laser.x + 1, baseY - 35, 3, 1);
+            ctx.strokeRect(laser.x + 26, baseY - 35, 3, 1);
+            ctx.strokeRect(laser.x + 1, baseY - 28, 3, 1);
+            ctx.strokeRect(laser.x + 26, baseY - 28, 3, 1);
+            
+            // Control panel details (hollow)
+            ctx.strokeRect(laser.x + 9, baseY - 29, 2, 2);
+            ctx.strokeRect(laser.x + 13, baseY - 29, 2, 2);
+            ctx.strokeRect(laser.x + 17, baseY - 29, 2, 2);
+            
+            // Antenna on top
+            ctx.beginPath();
+            ctx.moveTo(centerX - 2, baseY - 60);
+            ctx.lineTo(centerX - 3, baseY - 62);
+            ctx.lineTo(centerX + 3, baseY - 62);
+            ctx.lineTo(centerX + 2, baseY - 60);
+            ctx.closePath();
+            ctx.stroke();
+        }
+        
+        function drawBeam() {
+            if (beam.active) {
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(beam.x, beam.y, beam.width, beam.height);
+            }
+        }
+        
+        function drawMissile() {
+            if (missile.active) {
+                ctx.strokeStyle = '#fff';
+                ctx.fillStyle = '#fff';
+                
+                // Draw trail
+                ctx.lineWidth = 1;
+                for (let i = 1; i < missile.trail.length; i++) {
+                    const alpha = i / missile.trail.length;
+                    ctx.globalAlpha = alpha;
+                    ctx.beginPath();
+                    ctx.moveTo(missile.trail[i-1].x, missile.trail[i-1].y);
+                    ctx.lineTo(missile.trail[i].x, missile.trail[i].y);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+                
+                // Draw missile body
+                ctx.fillRect(missile.x - 2, missile.y - 3, 4, 6);
+                
+                // Draw fins
+                ctx.beginPath();
+                ctx.moveTo(missile.x - 2, missile.y + 2);
+                ctx.lineTo(missile.x - 4, missile.y + 3);
+                ctx.lineTo(missile.x - 2, missile.y + 3);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.moveTo(missile.x + 2, missile.y + 2);
+                ctx.lineTo(missile.x + 4, missile.y + 3);
+                ctx.lineTo(missile.x + 2, missile.y + 3);
+                ctx.fill();
+            }
+        }
+        
+        function updateUFOs() {
+            if (alien.active) return; // Stop UFOs when alien is active
+            
+            ufos.forEach(ufo => {
+                ufo.x += ufo.speed * ufo.direction;
+                
+                if (ufo.x + ufo.width >= canvas.width || ufo.x <= 0) {
+                    ufo.direction *= -1;
+                    ufo.y += 30;
+                }
+                
+                // Check if UFO reached the laser height
+                if (ufo.y + ufo.height >= laser.y && !gameOver && !alien.active) {
+                    gameRunning = false;
+                    
+                    // Start alien beam down sequence
+                    alien.active = true;
+                    alien.beaming = true;
+                    alien.beamFrame = 0;
+                    alien.x = ufo.x + ufo.width / 2;
+                    alien.y = ufo.y + ufo.height;
+                    alien.targetX = laser.x + laser.width + 8; // Stop near right edge of laser base
+                    alien.running = false;
+                    alien.planting = false;
+                }
+            });
+        }
+        
+        function updateBeam() {
+            if (beam.active) {
+                beam.height += 20;
+                beam.y -= 20;
+                
+                if (beam.y <= 0) {
+                    beam.active = false;
+                }
+                
+                // Check collision with any UFO
+                for (let i = ufos.length - 1; i >= 0; i--) {
+                    if (checkCollision(ufos[i])) {
+                        score++;
+                        beam.active = false;
+                        
+                        // Start explosion
+                        explosion.active = true;
+                        explosion.x = ufos[i].x + ufos[i].width / 2;
+                        explosion.y = ufos[i].y + ufos[i].height / 2;
+                        explosion.frame = 0;
+                        
+                        // Remove the UFO
+                        ufos.splice(i, 1);
+                        
+                        if (ufos.length === 0) {
+                            wave++;
+                            setTimeout(() => {
+                                startNewWave();
+                            }, 1000);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
+        function updateMissile() {
+            if (missile.active && missile.targetUFO) {
+                // Check if target still exists
+                if (!ufos.includes(missile.targetUFO)) {
+                    missile.active = false;
+                    missile.targetUFO = null;
+                    return;
+                }
+                
+                // Calculate target position (center of the UFO)
+                const targetX = missile.targetUFO.x + missile.targetUFO.width / 2;
+                const targetY = missile.targetUFO.y + missile.targetUFO.height / 2;
+                
+                const dx = targetX - missile.x;
+                const dy = targetY - missile.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < 5) {
+                    // Missile hit the target
+                    const hitUFO = missile.targetUFO;
+                    missile.active = false;
+                    
+                    // Start explosion at target
+                    explosion.active = true;
+                    explosion.x = targetX;
+                    explosion.y = targetY;
+                    explosion.frame = 0;
+                    
+                    // Remove the target UFO
+                    const index = ufos.indexOf(hitUFO);
+                    if (index > -1) {
+                        score++;
+                        ufos.splice(index, 1);
+                        
+                        // Generate new math problem after hit
+                        generateMathProblem();
+                        
+                        if (ufos.length === 0) {
+                            wave++;
+                            setTimeout(() => {
+                                startNewWave();
+                            }, 1000);
+                        }
+                    }
+                    
+                    missile.targetUFO = null;
+                } else {
+                    // Move missile toward current target position
+                    const speed = 8;
+                    missile.x += (dx / dist) * speed;
+                    missile.y += (dy / dist) * speed;
+                    
+                    // Add trail point
+                    missile.trail.push({ x: missile.x, y: missile.y });
+                    if (missile.trail.length > 10) {
+                        missile.trail.shift();
+                    }
+                }
+            }
+        }
+        
+        function checkCollision(ufo) {
+            return beam.active &&
+                   beam.x < ufo.x + ufo.width &&
+                   beam.x + beam.width > ufo.x &&
+                   beam.y < ufo.y + ufo.height &&
+                   beam.y + beam.height > ufo.y;
+        }
+        
+        function updateExplosion() {
+            if (explosion.active) {
+                explosion.frame++;
+                if (explosion.frame > 15) {
+                    explosion.active = false;
+                    if (gameOver) {
+                        answerBtns.forEach(btn => btn.disabled = true);
+                        startBtn.disabled = false;
+                    }
+                }
+            }
+        }
+        
+        function updateAlien() {
+            if (!alien.active) return;
+            
+            if (alien.beaming) {
+                alien.beamFrame++;
+                alien.y += 2;
+                
+                if (alien.y >= canvas.height - 20) {
+                    alien.beaming = false;
+                    alien.running = true;
+                }
+            } else if (alien.running) {
+                const speed = 2;
+                if (Math.abs(alien.x - alien.targetX) > speed) {
+                    alien.x += alien.x < alien.targetX ? speed : -speed;
+                } else {
+                    alien.running = false;
+                    alien.planting = true;
+                    alien.plantFrame = 0;
+                }
+            } else if (alien.planting) {
+                alien.plantFrame++;
+                
+                if (alien.plantFrame > 60) {
+                    // Bomb explodes
+                    gameOver = true;
+                    saveHighScore();
+                    explosion.active = true;
+                    explosion.x = laser.x + laser.width / 2;
+                    explosion.y = laser.y + laser.height / 2;
+                    explosion.frame = 0;
+                    alien.active = false;
+                }
+            }
+        }
+        
+        function updateWaveMessage() {
+            if (waveMessage.active) {
+                waveMessage.frame++;
+                if (waveMessage.frame > 90) {
+                    waveMessage.active = false;
+                }
+            }
+        }
+        
+        function drawExplosion() {
+            if (explosion.active) {
+                ctx.strokeStyle = '#fff';
+                ctx.fillStyle = '#fff';
+                
+                const size = explosion.frame * 3;
+                
+                // Expanding circle
+                ctx.beginPath();
+                ctx.arc(explosion.x, explosion.y, size, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Explosion lines
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 * i) / 8;
+                    const x1 = explosion.x + Math.cos(angle) * size * 0.5;
+                    const y1 = explosion.y + Math.sin(angle) * size * 0.5;
+                    const x2 = explosion.x + Math.cos(angle) * size * 1.2;
+                    const y2 = explosion.y + Math.sin(angle) * size * 1.2;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+                
+                // Small particles
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI * 2 * i) / 6 + explosion.frame * 0.2;
+                    const dist = size * 1.5;
+                    const x = explosion.x + Math.cos(angle) * dist;
+                    const y = explosion.y + Math.sin(angle) * dist;
+                    ctx.fillRect(x - 1, y - 1, 2, 2);
+                }
+            }
+        }
+        
+        function drawAlien() {
+            if (!alien.active) return;
+            
+            ctx.strokeStyle = '#fff';
+            ctx.fillStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            
+            if (alien.beaming) {
+                // Teleport beam
+                const beamAlpha = (alien.beamFrame % 10) / 10;
+                ctx.globalAlpha = beamAlpha;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(alien.x, alien.y - 40);
+                ctx.lineTo(alien.x, alien.y);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
+            
+            // Alien body in profile (facing left)
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5;
+            
+            // Large helmet/head
+            ctx.beginPath();
+            ctx.arc(alien.x, alien.y - 14, 7, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Helmet visor (oval window)
+            ctx.beginPath();
+            ctx.ellipse(alien.x - 2, alien.y - 14, 3, 4, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Eye inside visor
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(alien.x - 2, alien.y - 14, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Helmet antenna
+            ctx.beginPath();
+            ctx.moveTo(alien.x + 2, alien.y - 20);
+            ctx.lineTo(alien.x + 2, alien.y - 23);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(alien.x + 2, alien.y - 23, 1, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Neck
+            ctx.beginPath();
+            ctx.moveTo(alien.x - 1, alien.y - 7);
+            ctx.lineTo(alien.x - 1, alien.y - 5);
+            ctx.moveTo(alien.x + 1, alien.y - 7);
+            ctx.lineTo(alien.x + 1, alien.y - 5);
+            ctx.stroke();
+            
+            // Small body (rounded)
+            ctx.beginPath();
+            ctx.arc(alien.x, alien.y - 1, 4, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Arm reaching forward (if planting) - now reaching left
+            if (alien.planting) {
+                ctx.beginPath();
+                ctx.moveTo(alien.x - 3, alien.y - 2);
+                ctx.lineTo(alien.x - 8, alien.y + 2);
+                ctx.lineTo(alien.x - 10, alien.y + 4);
+                ctx.stroke();
+            } else {
+                // Arm at side
+                ctx.beginPath();
+                ctx.moveTo(alien.x - 3, alien.y - 1);
+                ctx.lineTo(alien.x - 5, alien.y + 1);
+                ctx.stroke();
+            }
+            
+            // Back arm
+            ctx.beginPath();
+            ctx.moveTo(alien.x + 3, alien.y - 1);
+            ctx.lineTo(alien.x + 4, alien.y + 1);
+            ctx.stroke();
+            
+            // Legs
+            ctx.beginPath();
+            ctx.moveTo(alien.x - 1, alien.y + 3);
+            ctx.lineTo(alien.x - 1, alien.y + 8);
+            ctx.lineTo(alien.x - 3, alien.y + 10);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(alien.x + 1, alien.y + 3);
+            ctx.lineTo(alien.x + 1, alien.y + 8);
+            ctx.lineTo(alien.x - 1, alien.y + 10);
+            ctx.stroke();
+            
+            // Bomb if planting
+            if (alien.planting) {
+                const bombX = alien.x - 12;
+                const bombY = canvas.height - 10;
+                
+                // Bomb body
+                ctx.beginPath();
+                ctx.arc(bombX, bombY, 3, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Fuse
+                ctx.beginPath();
+                ctx.moveTo(bombX, bombY - 3);
+                ctx.lineTo(bombX - 1, bombY - 6);
+                ctx.stroke();
+                
+                // Sparks on fuse
+                if (alien.plantFrame % 8 < 4) {
+                    ctx.fillRect(bombX - 1, bombY - 6, 1, 1);
+                }
+            }
+        }
+        
+        function drawWaveMessage() {
+            if (waveMessage.active) {
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 36px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const alpha = waveMessage.frame < 30 ? waveMessage.frame / 30 : 
+                              waveMessage.frame > 60 ? (90 - waveMessage.frame) / 30 : 1;
+                ctx.globalAlpha = alpha;
+                
+                ctx.fillText('WAVE ' + wave, canvas.width / 2, canvas.height / 2);
+                ctx.globalAlpha = 1;
+            }
+        }
+        
+        function drawGameOver() {
+            if (gameOver) {
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+                
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText('Final Score: ' + score, canvas.width / 2, canvas.height / 2 + 50);
+            }
+        }
+        
+        function drawScore() {
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px monospace';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('SCORE: ' + score.toString().padStart(5, '0'), 10, 10);
+            
+            // Draw high score on the right
+            ctx.textAlign = 'right';
+            ctx.fillText('HI: ' + highScore.toString().padStart(5, '0'), canvas.width - 10, 10);
+        }
+        
+        function drawMathProblem() {
+            if (gameRunning && !gameOver) {
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 24px monospace';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'bottom';
+                
+                const problemText = mathProblem.num1 + ' + ' + mathProblem.num2;
+                ctx.fillText(problemText, laser.x - 10, canvas.height - 30);
+            }
+        }
+        
+        function gameLoop() {
+            if (!gameRunning && !gameOver && !alien.active) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (!gameOver && !alien.active) {
+                updateUFOs();
+                updateBeam();
+                updateMissile();
+            }
+            updateExplosion();
+            updateWaveMessage();
+            updateAlien();
+            
+            ufos.forEach(ufo => drawUFO(ufo));
+            if (!gameOver) {
+                drawLaser();
+                drawBeam();
+                drawMissile();
+            }
+            drawExplosion();
+            drawWaveMessage();
+            drawGameOver();
+            drawAlien();
+            drawScore();
+            drawMathProblem();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function createUFOs() {
+            ufos = [];
+            const numUFOs = 4 + wave; // Start with 5, add 1 each wave
+            const spacing = Math.min(60, (canvas.width - 60) / numUFOs);
+            const startX = (canvas.width - (numUFOs * spacing - (spacing - 30))) / 2;
+            const y = 80;
+            
+            for (let i = 0; i < numUFOs; i++) {
+                ufos.push({
+                    x: startX + (i * spacing),
+                    y: y,
+                    width: 30,
+                    height: 15,
+                    speed: 2 + (wave * 0.3),
+                    direction: 1
+                });
+            }
+        }
+        
+        function startNewWave() {
+            waveMessage.active = true;
+            waveMessage.frame = 0;
+            createUFOs();
+        }
+        
+        function fireMissile() {
+            if (!missile.active && gameRunning && !alien.active && ufos.length > 0) {
+                // Find the UFO closest to the laser (lowest Y position = highest threat)
+                let target = ufos[0];
+                for (let i = 1; i < ufos.length; i++) {
+                    if (ufos[i].y > target.y) {
+                        target = ufos[i];
+                    }
+                }
+                
+                missile.active = true;
+                missile.x = laser.x + laser.width / 2;
+                missile.y = canvas.height - 62;
+                missile.targetUFO = target;
+                missile.trail = [];
+            }
+        }
+        
+        function checkAnswer(answer) {
+            const selectedAnswer = parseInt(answer);
+            if (selectedAnswer === mathProblem.answer) {
+                // Correct answer - fire missile
+                fireMissile();
+            } else {
+                // Wrong answer - do nothing or show feedback
+                console.log('Wrong answer!');
+            }
+        }
+        
+        function startGame() {
+            gameRunning = true;
+            gameOver = false;
+            score = 0;
+            wave = 1;
+            beam.active = false;
+            missile.active = false;
+            alien.active = false;
+            waveMessage.active = true;
+            waveMessage.frame = 0;
+            generateMathProblem();
+            createUFOs();
+            startBtn.disabled = true;
+            answerBtns.forEach(btn => btn.disabled = false);
+            gameLoop();
+        }
+        
+        startBtn.addEventListener('click', startGame);
+        
+        answerBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                checkAnswer(btn.textContent);
+            });
+        });
+        
+        drawLaser();
+    </script>
+</body>
+</html>
