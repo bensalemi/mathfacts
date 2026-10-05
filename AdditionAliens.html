@@ -821,7 +821,7 @@
                 // Correct answer - fire missile
                 fireMissile();
             } else {
-                // Wrong answer - do nothing or show feedback
+                ufos.forEach(ufo => {ufo.y += 5;})
                 console.log('Wrong answer!');
             }
         }
