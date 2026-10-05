@@ -124,6 +124,8 @@
         ];
         const scoreDisplay = document.getElementById('score');
         
+        let waveStartTime = Date.now(); 
+        let lastDrawTime = Date.now(); 
         let gameRunning = false;
         let score = 0;
         let highScore = 0;
@@ -331,6 +333,9 @@
                 ufo.x += ufo.speed * ufo.direction;
                 
                 if (ufo.x + ufo.width >= canvas.width || ufo.x <= 0) {
+                    if (ufo.x + ufo.width >= canvas.width) { ufo.x = canvas.width - ufo.width;}
+                    if (ufo.x <= 0) { ufo.x = 0;}
+                    console.log('Speed: ',ufo.speed);
                     ufo.direction *= -1;
                     ufo.y += 30;
                 }
@@ -429,7 +434,7 @@
                             wave++;
                             setTimeout(() => {
                                 startNewWave();
-                            }, 1000);
+                            }, 2000);
                         }
                     }
                     
@@ -727,6 +732,14 @@
         
         function gameLoop() {
             if (!gameRunning && !gameOver && !alien.active) return;
+
+            if (Date.now() - lastDrawTime < 16)  
+            {
+                setTimeout(() => { gameLoop();}, (16 - (Date.now() - lastDrawTime)));
+                return;
+            } 
+            lastDrawTime = Date.now();
+
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
@@ -752,6 +765,7 @@
             drawScore();
             drawMathProblem();
             
+
             requestAnimationFrame(gameLoop);
         }
         
@@ -778,6 +792,9 @@
             waveMessage.active = true;
             waveMessage.frame = 0;
             createUFOs();
+            waveStartTime = Date.now(); 
+            lastDrawTime = Date.now(); 
+
         }
         
         function fireMissile() {
@@ -823,6 +840,9 @@
             createUFOs();
             startBtn.disabled = true;
             answerBtns.forEach(btn => btn.disabled = false);
+            waveStartTime = Date.now(); 
+            lastDrawTime = Date.now(); 
+
             gameLoop();
         }
         
